@@ -8,6 +8,9 @@ require('dotenv').config();
 
 const app = express();
 
+//Use public folder for images
+app.use(express.static('public'));
+
 // Enable usses of JSON format
 app.use(express.json());
 
@@ -336,6 +339,116 @@ app.get('/getRDVs', (req, res) => {
 	});
 });
 
+
+// get full details of RDV
+app.get('/getFullDetails', (req, res) => {
+	var query =
+		'SELECT r.*, m.*, q.*, p.* from rendez_vous r JOIN medecin m ON r.id_doctor=m.id_medecin JOIN qr_codes q ON q.id_rdv=r.id_rdv JOIN patient p ON p.id_patient=r.id_patient';
+	connection.query(query, (error, results) => {
+		if (error) {
+			res.status(500).send({
+				error,
+			});
+		} else {
+			if (results.length != 0) {
+				res.status(200).send(results);
+			} else {
+				res.status(404).send({
+					message: 'There is no rendez vous in database (no details)',
+				});
+			}
+		}
+	});
+});
+
+// Verify authentification of a doctor
+app.get('/getDoctor/:num_tel_medecin/:password_medecin',function(req,res,next){ 
+    var data = Object() 
+	var pwd = req.params.password_medecin
+    var query = "select * from medecin where num_tel_medecin=?"
+    connection.query(query,[req.params.num_tel_medecin],function(error,results){
+      	if (error) { next(error) } else {
+			if(results.length>0) {
+				data = results[0]
+				bcrypt.compare(pwd, data.password_medecin, function(err, result) {
+					res.status(200).send(result)
+				});
+        	}
+			else{
+				res.status(404).send({
+					message: 'Not allowed',
+				});
+			}
+    	}
+  	})
+});
+
+// Verify authentification of a patient
+app.get('/getPatient/:num_tel_patient/:password_patient',function(req,res,next){ 
+    var data = Object() 
+	var pwd = req.params.password_patient
+    var query = "select * from patient where num_tel_patient=?"
+    connection.query(query,[req.params.num_tel_patient],function(error,results){
+		if (error) { next(error) } else {
+			if(results.length>0) {
+				data = results[0]
+				bcrypt.compare(pwd, data.password_patient, function(err, result) {
+					res.status(200).send(result)
+				});
+        	}
+			else{
+				res.status(404).send({
+					message: 'Not allowed',
+				});
+			}
+    	}	
+  	})
+});
+
+
+
+app.get('/getIdPatient/:num_tel_patient',function(req,res,next){ 
+    var data = Object() 
+    var query = "select id_patient from patient where num_tel_patient=?"
+    connection.query(query,[req.params.num_tel_patient],function(error,results){
+		if (error) { next(error) } else {
+			if(results.length>0) {
+				data = results[0]
+				const id = data.id_patient;
+				res.status(200).send(String(id));
+        	}
+			else{
+				res.status(404).send({
+					message: 'Not allowed',
+				});
+			}
+    	}	
+  	})
+});
+
+app.get('/getIdMedecin/:num_tel_medecin',function(req,res,next){ 
+    var data = Object() 
+    var query = "select id_medecin from medecin where num_tel_medecin=?"
+    connection.query(query,[req.params.num_tel_medecin],function(error,results){
+		if (error) { next(error) } else {
+			if(results.length>0) {
+				data = results[0]
+				const id = data.id_medecin;
+				res.status(200).send(String(id));
+        	}
+			else{
+				res.status(404).send({
+					message: 'Not allowed',
+				});
+			}
+    	}	
+  	})
+});
+
+
+
+
+
 // Add a patient
 app.post('/addPatient', function (req, res) {
 	const query =
@@ -371,28 +484,29 @@ app.post('/addPatient', function (req, res) {
 	}
 });
 
-// get full details of RDV
-app.get('/getFullDetails', (req, res) => {
-	var query =
-		'SELECT r.*, m.*, q.*, p.* from rendez_vous r JOIN medecin m ON r.id_doctor=m.id_medecin JOIN qr_codes q ON q.id_rdv=r.id_rdv JOIN patient p ON p.id_patient=r.id_patient';
-	connection.query(query, (error, results) => {
-		if (error) {
-			res.status(500).send({
-				error,
-			});
-		} else {
-			if (results.length != 0) {
-				res.status(200).send(results);
-			} else {
-				res.status(404).send({
-					message: 'There is no rendez vous in database (no details)',
-				});
-			}
-		}
-	});
-});
 
-const PORT = process.env.PORT || 4000;
+
+app.post('/addConseil',function(req,res,next){ 
+	var query = "INSERT  INTO conseil (text_conseil,id_medecin,id_patient) VALUES (?,?,?)";
+	//console.log(req.body)
+	connection.query(query,[req.body.conseil,req.body.id_medecin,1],function(error,results){
+	
+	 if(error) {
+	   next(error) 
+	}
+	else {
+	 res.send(JSON.stringify('success'));
+		 }
+	 }) 
+  });
+
+
+
+
+
+
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
 	console.log(`server is up and running on port: http://localhost:${PORT}`);
 });
