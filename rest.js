@@ -87,6 +87,7 @@ app.get('/getMedecinBySpeciality/:speciality', (req, res) => {
 	});
 });
 
+// Get medecin agenda
 app.get('/getMedecinAgenda/:idMedecin', (req, res) => {
 	var query = 'SELECT * from agenda where id_medecin=?';
 	connection.query(query, [req.params.idMedecin], (error, results) => {
@@ -171,7 +172,7 @@ app.get(
 // add rendez_vous
 app.post('/addRDV', function (req, res) {
 	const query =
-		'INSERT INTO rendez_vous (jour_rdv, mois_rdv, annee_rdv, heure_rdv, id_patient, id_doctor, id_traitement) VALUES (?, ?, ?, ?, ?, ?, ?)';
+		'INSERT INTO rendez_vous (jour_rdv, mois_rdv, annee_rdv, heure_rdv, id_patient, id_doctor) VALUES (?, ?, ?, ?, ?, ?)';
 
 	connection.query(
 		query,
@@ -182,7 +183,6 @@ app.post('/addRDV', function (req, res) {
 			req.body.heure_rdv,
 			req.body.id_patient,
 			req.body.id_doctor,
-			req.body.id_traitement,
 		],
 		(error, results) => {
 			if (results) {
@@ -198,10 +198,10 @@ app.post('/addRDV', function (req, res) {
 
 // get RDV
 app.get(
-	'/getRDV/:jour_rdv/:mois_rdv/:annee_rdv/:heure_rdv/:id_medecin/:id_patient/:id_traitement',
+	'/getRDV/:jour_rdv/:mois_rdv/:annee_rdv/:heure_rdv/:id_medecin/:id_patient',
 	function (req, res) {
 		const query =
-			'SELECT id_rdv FROM rendez_vous WHERE jour_rdv=? and mois_rdv=? and annee_rdv=? and heure_rdv=? and id_patient=? and id_doctor=? and id_traitement=?';
+			'SELECT id_rdv FROM rendez_vous WHERE jour_rdv=? and mois_rdv=? and annee_rdv=? and heure_rdv=? and id_patient=? and id_doctor=?';
 
 		connection.query(
 			query,
@@ -212,7 +212,6 @@ app.get(
 				req.params.heure_rdv,
 				req.params.id_patient,
 				req.params.id_medecin,
-				req.params.id_traitement,
 			],
 			(error, results) => {
 				if (results) {
@@ -228,6 +227,20 @@ app.get(
 		);
 	}
 );
+
+app.get('/getQRCode/:id_rdv', function (req, res) {
+	const query = 'SELECT * FROM qr_codes WHERE id_rdv=?';
+
+	connection.query(query, [req.params.id_rdv], (error, results) => {
+		if (results) {
+			res.status(200).send(results[0]);
+		} else {
+			res.status(500).send({
+				error,
+			});
+		}
+	});
+});
 
 // Add Qr Code
 app.post('/addQrCode', function (req, res) {
@@ -303,7 +316,27 @@ app.get('/getPatients', (req, res) => {
 	});
 });
 
-// Add a doctor
+// Get all rendez vous
+app.get('/getRDVs', (req, res) => {
+	var query = 'SELECT * from rendez_vous';
+	connection.query(query, (error, results) => {
+		if (error) {
+			res.status(500).send({
+				error,
+			});
+		} else {
+			if (results.length != 0) {
+				res.status(200).send(results);
+			} else {
+				res.status(404).send({
+					message: 'There is no rendez vous in database',
+				});
+			}
+		}
+	});
+});
+
+// Add a patient
 app.post('/addPatient', function (req, res) {
 	const query =
 		'INSERT INTO patient (nom_patient,prenom_patient,num_tel_patient,password_patient) VALUES (?,?,?,?)';
@@ -336,6 +369,27 @@ app.post('/addPatient', function (req, res) {
 			error: err,
 		});
 	}
+});
+
+// get full details of RDV
+app.get('/getFullDetails', (req, res) => {
+	var query =
+		'SELECT r.*, m.*, q.*, p.* from rendez_vous r JOIN medecin m ON r.id_doctor=m.id_medecin JOIN qr_codes q ON q.id_rdv=r.id_rdv JOIN patient p ON p.id_patient=r.id_patient';
+	connection.query(query, (error, results) => {
+		if (error) {
+			res.status(500).send({
+				error,
+			});
+		} else {
+			if (results.length != 0) {
+				res.status(200).send(results);
+			} else {
+				res.status(404).send({
+					message: 'There is no rendez vous in database (no details)',
+				});
+			}
+		}
+	});
 });
 
 const PORT = process.env.PORT || 4000;
