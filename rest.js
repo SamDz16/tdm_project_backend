@@ -69,6 +69,26 @@ app.get('/getDoctors', (req, res) => {
 	});
 });
 
+// Get traitements
+app.get('/getTraitements/:idPatient', (req, res) => {
+	var query = 'SELECT * from traitement where id_patient = ?';
+	connection.query(query, [req.params.idPatient], (error, results) => {
+		if (error) {
+			res.status(500).send({
+				error,
+			});
+		} else {
+			if (results.length != 0) {
+				res.status(200).send(results);
+			} else {
+				res.status(404).send({
+					message: 'There is no traitement in database for this patient',
+				});
+			}
+		}
+	});
+});
+
 // Get medecin by speciality
 // Get all doctors
 app.get('/getMedecinBySpeciality/:speciality', (req, res) => {
