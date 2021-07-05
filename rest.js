@@ -360,10 +360,30 @@ app.get('/getRDVs', (req, res) => {
 });
 
 // get full details of RDV
-app.get('/getFullDetails', (req, res) => {
+app.get('/getFullDetailsMedecin/:id_medecin', (req, res) => {
 	var query =
-		'SELECT r.*, m.*, q.*, p.* from rendez_vous r JOIN medecin m ON r.id_doctor=m.id_medecin JOIN qr_codes q ON q.id_rdv=r.id_rdv JOIN patient p ON p.id_patient=r.id_patient';
-	connection.query(query, (error, results) => {
+		'SELECT r.*, m.*, q.*, p.* from rendez_vous r JOIN medecin m ON r.id_doctor=m.id_medecin JOIN qr_codes q ON q.id_rdv=r.id_rdv JOIN patient p ON p.id_patient=r.id_patient WHERE r.id_doctor=?';
+	connection.query(query, [req.params.id_medecin], (error, results) => {
+		if (error) {
+			res.status(500).send({
+				error,
+			});
+		} else {
+			if (results.length != 0) {
+				res.status(200).send(results);
+			} else {
+				res.status(404).send({
+					message: 'There is no rendez vous in database (no details)',
+				});
+			}
+		}
+	});
+});
+
+app.get('/getFullDetailsPatient/:id_patient', (req, res) => {
+	var query =
+		'SELECT r.*, m.*, q.*, p.* from rendez_vous r JOIN medecin m ON r.id_doctor=m.id_medecin JOIN qr_codes q ON q.id_rdv=r.id_rdv JOIN patient p ON p.id_patient=r.id_patient WHERE r.id_patient=?';
+	connection.query(query, [req.params.id_patient], (error, results) => {
 		if (error) {
 			res.status(500).send({
 				error,
